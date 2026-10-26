@@ -15,6 +15,8 @@ def get_driver():
 
     options.no_reset = True
     options.full_reset = False
+    # Interactive OTP tests pause while a tester receives and enters an SMS code.
+    options.new_command_timeout = 300
 
     options.ignore_hidden_api_policy_error = True
 

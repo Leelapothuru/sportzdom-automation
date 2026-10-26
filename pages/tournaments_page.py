@@ -50,6 +50,22 @@ class TournamentsPage:
         # label by accessibility id resolves its live on-screen position.
         self._by_id(stable_label).click()
 
+    def scroll_form_down(self):
+        """Scroll the wizard's content pane without relying on stale coordinates."""
+        self.driver.execute_script(
+            "mobile: scrollGesture",
+            {"left": 100, "top": 760, "width": 880, "height": 1000,
+             "direction": "down", "percent": 0.8},
+        )
+
+    def fill_field_by_hint(self, hint, value):
+        """Fill a current visible input by its stable Android hint text."""
+        fields = self.driver.find_elements(AppiumBy.CLASS_NAME, "android.widget.EditText")
+        field = next(field for field in fields if field.get_attribute("hint") == hint)
+        field.click()
+        field.clear()
+        field.send_keys(value)
+
     # -- nav / entry point --------------------------------------------------
 
     def click_tournaments_nav(self):
@@ -75,14 +91,21 @@ class TournamentsPage:
         self._fill_edit_text(0, name)
 
     def select_sport(self, sport):
-        self._by_id("Choose a sport").click()
+        # A resumed draft exposes the selected sport instead of the picker.
+        if not self.driver.find_elements(AppiumBy.ACCESSIBILITY_ID, sport):
+            self._by_id("Choose a sport").click()
+            time.sleep(1)
+            self._by_id(sport).click()
+        # Selecting a sport re-composes the dependent match-type buttons.
         time.sleep(1)
-        self._by_id(sport).click()
 
     def select_tournament_type(self, tournament_type):
         self._by_id(tournament_type).click()
 
     def select_match_type(self, match_type):
+        # This control is rendered immediately below the tournament-type
+        # explanation and is often below the viewport on physical devices.
+        self.scroll_form_down()
         self._by_id(match_type).click()
 
     def select_age_group(self, age_group):
@@ -122,6 +145,30 @@ class TournamentsPage:
             self._fill_edit_text(3, third)
 
     def click_basic_details_next(self):
+        self._by_id("Save & continue").click()
+
+    # -- Current eight-step wizard: recorded Step 1 -----------------------
+
+    def complete_current_basic_details(self, name, state, district, city):
+        """Complete the required fields on the live Basic details wizard page."""
+        self.enter_tournament_name(name)
+        # The keyboard shrinks the wizard viewport and makes the option rows
+        # non-interactable on some devices.
+        self.driver.press_keycode(4)
+        self.select_sport("FootBall")
+        self.select_tournament_type("Knockout")
+        self.select_match_type("Team")
+        self.select_age_group("Open")
+        self.scroll_form_down()
+        self.select_category("Mixed")
+        self.select_area("District")
+        self.scroll_form_down()
+        self._by_id("Select state").click()
+        self._by_id(state).click()
+        self._by_id("Select district").click()
+        self._by_id(district).click()
+        self.fill_field_by_hint("Enter city or town", city)
+        self.driver.press_keycode(4)  # hide keyboard; do not navigate the wizard
         self._by_id("Save & continue").click()
 
     def upload_banner_manually(self, wait_seconds=20):
