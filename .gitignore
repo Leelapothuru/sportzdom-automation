@@ -1,0 +1,19 @@
+# Local test credentials and settings (see .env.example). Never commit.
+.env
+
+# Test run outputs: created fresh by every run (published as pipeline artifacts instead).
+# reports/ also holds local manual test notes, which are not part of the pipeline repo.
+reports/
+screenshots/
+inspect_output/
+
+# Local-only notes and assistant instructions (not needed to run tests)
+AGENTS.md
+claude.md
+information.md
+
+# Python environment and caches: rebuilt from requirements.txt / on every run
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/

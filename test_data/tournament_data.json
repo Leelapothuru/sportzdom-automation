@@ -1,0 +1,27 @@
+{
+  "tournament_defaults": {
+    "sport": "FootBall",
+    "match_type": "Team",
+    "age_group": "U-19",
+    "category": "Mixed",
+    "level": "District",
+    "state": "Andhra Pradesh",
+    "district": "Anantapur",
+    "city": "Anantapur",
+    "first_prize": "5000",
+    "second_prize": "1000",
+    "start_in_days": 7,
+    "duration_days": 10,
+    "playing_days": "Every day",
+    "match_minutes": "90",
+    "players_per_side": "11",
+    "expected_teams": "16",
+    "ground_opens": ["8", "AM"],
+    "ground_closes": ["6", "PM"],
+    "grounds": 2,
+    "referees": 2,
+    "scorers": 1,
+    "entry_fee": "500",
+    "rules": ["FB01", "FB02"]
+  }
+}
