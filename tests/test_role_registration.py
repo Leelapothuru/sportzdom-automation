@@ -95,7 +95,7 @@ def test_archery_referee_role_registration_flow():
         click_element(
             driver,
             5,
-            "Select Football",
+            "Select BasketBall",
             AppiumBy.ACCESSIBILITY_ID,
             "FootBall",
         )
