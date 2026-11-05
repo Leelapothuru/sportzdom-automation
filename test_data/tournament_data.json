@@ -23,5 +23,18 @@
     "scorers": 1,
     "entry_fee": "500",
     "rules": ["FB01", "FB02"]
+  },
+  "badminton_singles": {
+    "name": "Hyderabad Badminton tournament",
+    "sport": "Badminton",
+    "tournament_type": "Knockout",
+    "match_type": "Singles",
+    "state": "Telangana",
+    "district": "Hyderabad",
+    "city": "Hyderabad",
+    "sets": "3",
+    "match_minutes": null,
+    "players_per_side": null,
+    "rules": ["BD001", "BD002"]
   }
 }

@@ -1,11 +1,12 @@
-"""Single Tournament creation: one Knockout and one League tournament per run.
+"""Single Tournament creation: FootBall Knockout and League, and Badminton Singles Knockout.
 
-Both tournament types go through exactly the same steps (TournamentCreationFlow);
-only the tournament type differs. Each flow walks the wizard forward once,
-from Step 1 to Create, without going back to an earlier step, leaving the wizard
-or restarting the app. Both flows share one Appium session, so League starts
-right after Knockout finishes, and a run saves exactly two tournaments
-("Ready to publish"; nothing is published).
+Every flow goes through exactly the same wizard steps (TournamentCreationFlow);
+only the data differs. Each flow walks the wizard forward once, from Step 1 to
+Create, without going back to an earlier step, leaving the wizard or restarting
+the app. All flows share one Appium session and run one after another.
+Every flow then PUBLISHES its tournament from My drafts (re-publishing while it
+is still listed there). Test environment only; published tournaments are removed
+from the database afterwards by the team.
 Every check is its own test step; negative and boundary checks of each wizard
 step are made on the same form before its valid values are entered. If a step
 fails, the remaining steps of that flow are skipped.
@@ -23,11 +24,15 @@ import pytest
 from selenium.common.exceptions import InvalidSessionIdException
 
 from pages.tournament_page import TournamentsPage
-from test_data.tournament_data import new_tournament, playing_days_between
+from test_data.tournament_data import (
+    badminton_singles_tournament,
+    new_tournament,
+    playing_days_between,
+)
 from utils.driver_setup import get_driver
 from utils.helpers import by_label, review_date, rupees
 
-pytestmark = [pytest.mark.tournament, pytest.mark.creation, pytest.mark.incremental]
+pytestmark = [pytest.mark.tournament, pytest.mark.creation, pytest.mark.publish, pytest.mark.incremental]
 
 # Names this feature's reports and screenshot folders (see conftest.py).
 FEATURE = "tournament_creation"
@@ -52,6 +57,11 @@ class TournamentCreationFlow:
     """
 
     data = None
+    # Step 2 header count before anything is filled: FootBall 11, Badminton 10
+    # (Badminton has "Number of sets" instead of match duration and players per side).
+    schedule_required_fields = 11
+    # Review rows "Sport" and "Match type" were verified for Badminton only.
+    review_shows_format = False
 
     # -- entry and Step 1 --------------------------------------------------
 
@@ -102,7 +112,7 @@ class TournamentCreationFlow:
     # -- Step 2: Schedule --------------------------------------------------
 
     def test_empty_schedule_cannot_continue(self, tournaments):
-        assert tournaments.attention_count() == 11
+        assert tournaments.attention_count() == self.schedule_required_fields
         tournaments.save_step()
         assert tournaments.current_step() == 2, "Empty Schedule was accepted"
 
@@ -136,6 +146,8 @@ class TournamentCreationFlow:
         ids=["above-maximum", "below-minimum"],
     )
     def test_match_duration_must_be_between_1_and_300(self, tournaments, minutes, message):
+        if self.data.match_minutes is None:
+            pytest.skip(f"{self.data.sport} has no match duration field")
         tournaments.fill(tournaments.MATCH_MINUTES, minutes)
         tournaments.save_step()
 
@@ -232,6 +244,9 @@ class TournamentCreationFlow:
         data = self.data
         assert tournaments.review_value("Name") == data.name
         assert tournaments.review_value("Type") == data.tournament_type
+        if self.review_shows_format:
+            assert tournaments.review_value("Sport") == data.sport
+            assert tournaments.review_value("Match type") == data.match_type
         prizes = tournaments.review_value("Prizes")
         assert f"1st {rupees(data.first_prize)}" in prizes and f"2nd {rupees(data.second_prize)}" in prizes
         assert tournaments.review_value("Dates") == f"{review_date(data.start)} – {review_date(data.end)}"
@@ -258,12 +273,47 @@ class TournamentCreationFlow:
         card = tournaments.draft_card(self.data.name)
         assert "Ready to publish" in card, f"Created tournament not listed as ready to publish: {card!r}"
 
+    # -- Publishing (from My drafts) ----------------------------------------
+
+    def test_tournament_is_published(self, tournaments):
+        # Taps Publish, returns Home, then reloads My drafts (Home ->
+        # Tournaments) and publishes again while the tournament is still listed.
+        taps = tournaments.publish_draft(self.data.name)
+
+        assert not tournaments.draft_listed(self.data.name), (
+            f"{self.data.name!r} is still in My drafts after {taps} Publish tap(s)"
+        )
+
 
 @pytest.mark.smoke
 class TestKnockoutTournamentCreation(TournamentCreationFlow):
-    data = new_tournament("Knockout")
+    data = new_tournament("Knockout", name="FootBall Knockout Tournament")
 
 
 @pytest.mark.league
 class TestLeagueTournamentCreation(TournamentCreationFlow):
-    data = new_tournament("League")
+    data = new_tournament("League", name="Football League Tournament")
+
+
+class BadmintonSinglesFlow(TournamentCreationFlow):
+    """Badminton Singles differences from the FootBall flows (same steps, same publishing).
+
+    Not collected by itself; subclasses only choose the data (Knockout / League).
+    """
+
+    schedule_required_fields = 10
+    review_shows_format = True
+
+
+@pytest.mark.badminton
+class TestBadmintonSinglesKnockoutPublish(BadmintonSinglesFlow):
+    """Create and publish "Hyderabad Badminton tournament" (Badminton, Singles, Knockout)."""
+
+    data = badminton_singles_tournament()
+
+
+@pytest.mark.badminton
+class TestBadmintonSinglesLeaguePublish(BadmintonSinglesFlow):
+    """Create and publish "Hyderabad Badminton League" (Badminton, Singles, League)."""
+
+    data = badminton_singles_tournament(tournament_type="League", name="Hyderabad Badminton League")

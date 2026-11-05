@@ -95,9 +95,10 @@ python -m pytest -m smoke -v
 
 `test_login.py` needs the app signed out and `test_tournament_creation.py` needs it signed in;
 each skips with a reason when the app is in the wrong state.
-`test_tournament_creation.py` saves two tournaments ("Ready to publish") per run on the
-test account; it never publishes. Referees and scorers are picked only from test accounts
-(`user<number>`).
+`test_tournament_creation.py` creates four tournaments per run on the test account
+(FootBall Knockout and League, Badminton Singles Knockout and League) and **publishes**
+each one from My drafts, then checks it appears in Upcoming. Run it only against the
+test environment. Referees and scorers are picked only from test accounts (`user<number>`).
 
 ## Reports and evidence
 

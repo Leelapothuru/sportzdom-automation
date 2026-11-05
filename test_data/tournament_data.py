@@ -18,9 +18,8 @@ from pathlib import Path
 OFFICIAL_TEST_USER = re.compile(r"user\d+")
 PROTECTED_OFFICIALS = ("Chandra",)
 
-_DEFAULTS = json.loads(
-    Path(__file__).with_name("tournament_data.json").read_text(encoding="utf-8")
-)["tournament_defaults"]
+_DATA = json.loads(Path(__file__).with_name("tournament_data.json").read_text(encoding="utf-8"))
+_DEFAULTS = _DATA["tournament_defaults"]
 
 
 @dataclass(frozen=True)
@@ -42,8 +41,11 @@ class TournamentData:
     )
     duration_days: int = _DEFAULTS["duration_days"]
     playing_days: str = _DEFAULTS["playing_days"]
-    match_minutes: str = _DEFAULTS["match_minutes"]
-    players_per_side: str = _DEFAULTS["players_per_side"]
+    # Team sports (e.g. FootBall) have a match duration and players per side;
+    # set-based sports (e.g. Badminton) have a number of sets instead.
+    match_minutes: str | None = _DEFAULTS["match_minutes"]
+    players_per_side: str | None = _DEFAULTS["players_per_side"]
+    sets: str | None = None
     expected_teams: str = _DEFAULTS["expected_teams"]
     ground_opens: tuple = tuple(_DEFAULTS["ground_opens"])
     ground_closes: tuple = tuple(_DEFAULTS["ground_closes"])
@@ -66,10 +68,20 @@ class TournamentData:
         return self.start - timedelta(days=1)
 
 
-def new_tournament(tournament_type="Knockout", **overrides):
-    """Return unique tournament data; the name stays within the 60-character limit."""
-    name = f"QA Auto {tournament_type} {int(time.time())}"
+def new_tournament(tournament_type="Knockout", name=None, **overrides):
+    """Return FootBall tournament data.
+
+    Without a name, a unique one is generated (within the 60-character limit).
+    """
+    name = name or f"QA Auto {tournament_type} {int(time.time())}"
     return TournamentData(name=name, tournament_type=tournament_type, **overrides)
+
+
+def badminton_singles_tournament(**overrides):
+    """Badminton Singles Knockout data from tournament_data.json (published by its test)."""
+    values = {**_DATA["badminton_singles"], **overrides}
+    values["rules"] = tuple(values["rules"])
+    return TournamentData(**values)
 
 
 def playing_days_between(start, end, option):

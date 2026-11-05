@@ -141,6 +141,16 @@ class TournamentsPage:
     DONE = by_label("Done")
     RESUME_DRAFT = by_label("Resume Tournament")
 
+    # -- Tournaments lists and publishing (verified 5 Nov 2026) --------------
+    # On a "Ready to publish" draft card. The card's delete (bin) icon sits
+    # close by and is never tapped.
+    PUBLISH_DRAFT = by_label("Publish Tournament")
+    HOME_NAV = by_label("Home\nHome")
+    UPCOMING_TAB = by_label("Upcoming")
+    # The hint is only exposed while the box is empty, so clear it before searching.
+    TOURNAMENT_SEARCH = by_xpath('//android.widget.EditText[@hint="Search tournaments by name or ID"]')
+    CLEAR_SEARCH = by_label("Clear search")
+
     def __init__(self, driver, timeout=20):
         self.driver = driver
         self.timeout = timeout
@@ -401,10 +411,13 @@ class TournamentsPage:
         return self.scroll_to(by_label(f"{group}: {value}")).get_attribute("selected") == "true"
 
     def select_location(self, state, district, city):
+        # States and districts further down their lists (e.g. Telangana) need scrolling.
         self.scroll_to(self.SELECT_STATE).click()
-        self.click(by_label(state))
+        self.wait_until_stable(3)
+        self.scroll_to(by_label(state)).click()
         self.scroll_to(self.SELECT_DISTRICT).click()
-        self.click(by_label(district))
+        self.wait_until_stable(3)
+        self.scroll_to(by_label(district)).click()
         self.fill(self.CITY_FIELD, city)
 
     def prize_field(self, position):
@@ -487,8 +500,12 @@ class TournamentsPage:
         self.pick_date(self.START_DATE, data.start)
         self.pick_date(self.END_DATE, data.end)
         self.choose("Playing days", data.playing_days)
-        self.fill(self.MATCH_MINUTES, data.match_minutes)
-        self.choose("Players per side", data.players_per_side)
+        if data.sets:
+            # Set-based sports such as Badminton.
+            self.choose("Number of sets", data.sets)
+        else:
+            self.fill(self.MATCH_MINUTES, data.match_minutes)
+            self.choose("Players per side", data.players_per_side)
         self.choose("Expected teams", data.expected_teams)
         self.set_time(self.GROUND_OPENS, *data.ground_opens)
         self.set_time(self.GROUND_CLOSES, *data.ground_closes)
@@ -705,3 +722,90 @@ class TournamentsPage:
                 button.click()
                 return
         raise NoSuchElementException(f"No Resume Tournament button on the draft card for {name}")
+
+    # -- Publishing --------------------------------------------------------
+    # Tournament lists come from the backend (DynamoDB) and update a little
+    # after a change. Lists are only reloaded by leaving the Tournaments screen,
+    # so every check goes Home -> Tournaments first.
+
+    def reload_tournaments(self):
+        """Go to Home and back to Tournaments so its lists are fetched again."""
+        self.hide_keyboard()
+        self.click(self.HOME_NAV)
+        self.wait_until_stable(3)
+        self.click(self.TOURNAMENTS_NAV)
+        self.wait_until_stable(3)
+
+    def open_tab(self, tab):
+        """Open a Tournaments tab ('Upcoming', 'My drafts', ...) after reloading the lists."""
+        self.reload_tournaments()
+        self.scroll_to(by_label(tab), directions=("up", "down")).click()
+        self.wait_until_stable(5)
+
+    def draft_listed(self, name):
+        """Whether My drafts (freshly loaded) has a card for name."""
+        self.open_tab("My drafts")
+        try:
+            self.scroll_to(description_contains(name), max_swipes=6)
+            return True
+        except NoSuchElementException:
+            return False
+
+    def _tap_publish(self, name):
+        """Tap 'Publish Tournament' on the open My drafts card for name.
+
+        The app publishes at once (no confirmation dialog). Only the button
+        inside this tournament's card is tapped, never another draft's, and
+        never the card's delete (bin) icon.
+        """
+        self.scroll_to(description_contains(name))
+        # The button sits at the bottom of the card, often under the bottom navigation.
+        self.scroll_to(self.PUBLISH_DRAFT)
+        card = self.wait_for(description_contains(name)).rect
+        for button in self.driver.find_elements(*self.PUBLISH_DRAFT):
+            centre = button.rect["y"] + button.rect["height"] / 2
+            if card["y"] <= centre <= card["y"] + card["height"]:
+                button.click()
+                self.click(self.HOME_NAV)
+                self.wait_until_stable(3)
+                return
+        raise NoSuchElementException(f"No Publish Tournament button on the draft card for {name}")
+
+    def publish_draft(self, name, max_attempts=5, settle=15):
+        """Publish every My drafts card named name, re-checking My drafts after each tap.
+
+        After tapping Publish, My drafts is reloaded (Home -> Tournaments);
+        while a card with this name is still listed it is published again.
+        Returns the number of Publish taps made.
+        """
+        assert self.draft_listed(name), f"{name!r} is not in My drafts, so it cannot be published"
+        for taps in range(1, max_attempts + 1):
+            self._tap_publish(name)
+            # Give the backend time to move the tournament out of drafts.
+            time.sleep(settle)
+            if not self.draft_listed(name):
+                return taps
+            log.warning("%s still in My drafts after %s Publish tap(s); publishing again", name, taps)
+        raise AssertionError(f"{name!r} is still in My drafts after {max_attempts} Publish taps")
+
+    def search_tournaments(self, text):
+        if self.is_present(self.CLEAR_SEARCH):
+            self.click(self.CLEAR_SEARCH)
+        self.fill(self.TOURNAMENT_SEARCH, text)
+
+    def find_upcoming(self, name, timeout=180, interval=15):
+        """Search Upcoming for name until it appears; True if found within timeout.
+
+        Published tournaments appeared about 30 s after publishing on 5 Nov 2026.
+        """
+        end = time.monotonic() + timeout
+        while True:
+            self.open_tab("Upcoming")
+            self.search_tournaments(name)
+            self.wait_until_stable(5)
+            if self.has_message(name):
+                return True
+            if time.monotonic() >= end:
+                return False
+            log.info("%s not in Upcoming yet; checking again in %ss", name, interval)
+            time.sleep(interval)
