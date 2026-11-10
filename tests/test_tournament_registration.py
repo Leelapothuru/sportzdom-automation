@@ -29,6 +29,7 @@ Accounts come from SPORTZDOM_PLAYER_EMAIL_TEMPLATE / SPORTZDOM_PLAYER_PASSWORD_T
 Registrations on these test accounts are test data (confirmed 6 Nov 2026).
 """
 
+
 import logging
 from dataclasses import dataclass, field
 
