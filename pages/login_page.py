@@ -34,8 +34,10 @@ class LoginPage:
 
     # Demo account form, opened from "Use a demo account".
     DEMO_TITLE = (AppiumBy.ACCESSIBILITY_ID, "Demo account")
-    DEMO_EMAIL_FIELD = (AppiumBy.XPATH, "//android.widget.EditText[@hint='Email address']")
-    DEMO_PASSWORD_FIELD = (AppiumBy.XPATH, "//android.widget.EditText[@hint='Password']")
+    # While focused, a field's hint gains its placeholder ("Email address\nname@example.com"),
+    # so match the start of the hint.
+    DEMO_EMAIL_FIELD = (AppiumBy.XPATH, "//android.widget.EditText[starts-with(@hint, 'Email address')]")
+    DEMO_PASSWORD_FIELD = (AppiumBy.XPATH, "//android.widget.EditText[starts-with(@hint, 'Password')]")
     # Same label as the registration screen's SIGN_IN_ENTRY; only used on the demo form.
     DEMO_SIGN_IN_BUTTON = (AppiumBy.XPATH, "//android.widget.Button[@content-desc='Sign in']")
     BACK_TO_CODE_SIGNIN = (AppiumBy.ACCESSIBILITY_ID, "Back to code sign-in")
@@ -274,6 +276,15 @@ class LoginPage:
                 + (" - the demo form is still shown (check the credentials)" if still_on_form else "")
             ) from None
         self.dismiss_overdue_popup()
+
+    def sign_in_with_demo_account(self, email, password):
+        """Sign in from the signed-out app with an email and password ("Use a demo account")."""
+        self.open_signin()
+        self.open_demo_account()
+        self.enter_demo_email(email)
+        self.enter_demo_password(password)
+        self.submit_demo_sign_in()
+        self.wait_for_signed_in()
 
     def dismiss_overdue_popup(self):
         if not self.driver.find_elements(*self.OVERDUE_POPUP):

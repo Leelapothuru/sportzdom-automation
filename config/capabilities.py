@@ -25,6 +25,9 @@ def android_options() -> UiAutomator2Options:
     # session starts: a restart shows the fingerprint "Unlock Sportzdom" screen.
     options.set_capability("appium:dontStopAppOnReset", True)
     options.new_command_timeout = settings.NEW_COMMAND_TIMEOUT
+    # Fail a command after this long when the on-device server stops answering,
+    # instead of Appium's 240 s default.
+    options.set_capability("appium:uiautomator2ServerReadTimeout", settings.UIA2_SERVER_READ_TIMEOUT_MS)
 
     options.ignore_hidden_api_policy_error = True
     return options

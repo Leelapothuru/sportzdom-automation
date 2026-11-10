@@ -6,6 +6,7 @@ from dedicated test accounts.
 """
 
 import json
+import os
 import re
 import time
 from dataclasses import dataclass, field
@@ -82,6 +83,42 @@ def badminton_singles_tournament(**overrides):
     values = {**_DATA["badminton_singles"], **overrides}
     values["rules"] = tuple(values["rules"])
     return TournamentData(**values)
+
+
+@dataclass(frozen=True)
+class RegistrationData:
+    """Tournament and the pool of numbered test accounts for the registration flow.
+
+    How many accounts register is not stored here: it is the expected number
+    of players shown by the tournament itself. Accounts are tried in order.
+    """
+
+    tournament: str
+    first_account: int
+    last_account: int
+
+    @property
+    def accounts(self):
+        return list(range(self.first_account, self.last_account + 1))
+
+
+def registration_data():
+    return RegistrationData(**_DATA["registration"])
+
+
+def account_credentials(number):
+    """(email, password) of numbered test account number, e.g. user 2.
+
+    The formats come from environment variables (.env locally, secret
+    pipeline variables in Azure DevOps), with {n} replaced by the number:
+        SPORTZDOM_PLAYER_EMAIL_TEMPLATE, SPORTZDOM_PLAYER_PASSWORD_TEMPLATE
+    Returns None when either is not set.
+    """
+    email = os.getenv("SPORTZDOM_PLAYER_EMAIL_TEMPLATE", "")
+    password = os.getenv("SPORTZDOM_PLAYER_PASSWORD_TEMPLATE", "")
+    if not (email and password):
+        return None
+    return email.format(n=number), password.format(n=number)
 
 
 def playing_days_between(start, end, option):

@@ -36,5 +36,10 @@
     "match_minutes": null,
     "players_per_side": null,
     "rules": ["BD001", "BD002"]
+  },
+  "registration": {
+    "tournament": "Hyderabad Badminton League",
+    "first_account": 1,
+    "last_account": 40
   }
 }

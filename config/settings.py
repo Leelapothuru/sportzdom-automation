@@ -41,3 +41,7 @@ DEVICE_NAME = os.getenv("SPORTZDOM_DEVICE_NAME", "Android")
 DEVICE_UDID = os.getenv("SPORTZDOM_DEVICE_UDID", "")
 # Interactive OTP tests pause while a tester receives and enters an SMS code.
 NEW_COMMAND_TIMEOUT = int(os.getenv("SPORTZDOM_NEW_COMMAND_TIMEOUT", "300"))
+# How long Appium waits for an unresponsive UiAutomator2 server on the device
+# before failing a command (Appium's default is 240 s; a hang on 10 Nov 2026
+# cost an hour at that setting).
+UIA2_SERVER_READ_TIMEOUT_MS = int(os.getenv("SPORTZDOM_UIA2_READ_TIMEOUT_MS", "60000"))
