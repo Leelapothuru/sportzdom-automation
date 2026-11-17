@@ -40,6 +40,7 @@ from pages.login_page import LoginPage
 from pages.logout_page import LogoutPage
 from pages.tournament_registration_page import TournamentRegistrationPage
 from test_data.tournament_data import account_credentials, registration_data
+from utils import session
 from utils.driver_setup import get_driver
 
 log = logging.getLogger(__name__)
@@ -131,13 +132,8 @@ def progress():
 
 
 def sign_in_as(app, number):
-    """Log out whoever is signed in, sign in as test account number, return its profile name."""
-    if app.login.app_state() != "signed_out":
-        app.logout.log_out()
-    email, password = account_credentials(number)
-    log.info("Signing in as user%s", number)
-    app.login.sign_in_with_demo_account(email, password)
-    return app.logout.profile_name()
+    """Sign in as test account number unless it already is; returns its profile name (utils/session.py)."""
+    return session.sign_in_as(app.login, app.logout, number)
 
 
 def open_tournament(app, progress):
@@ -214,9 +210,13 @@ def test_organizer_sees_full_tournament(app, progress):
     if not progress.organizers:
         pytest.skip(f"No organizer account found among the accounts tried in {POOL}")
     number = progress.organizers[0]
-    sign_in_as(app, number)
+    # Any organizer of the tournament may stay signed in; otherwise sign in user<number>.
+    name = session.sign_in_as(app.login, app.logout, number, accept=lambda n: "Organizers" in progress.roles_of(n))
     registered = open_tournament(app, progress)
 
+    assert "Organizers" in progress.roles_of(name), (
+        f"Signed in as {name}, who is not listed under Organizers: {progress.officials.get('Organizers')}"
+    )
     assert registered == progress.capacity, f"Organizer user{number} sees {registered}/{progress.capacity} players"
     listed = app.registration.players_listed_on_teams_tab()
     assert listed == progress.capacity, f"Organizer's Teams tab lists {listed} players, expected {progress.capacity}"

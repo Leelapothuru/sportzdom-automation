@@ -7,6 +7,7 @@ following the manually tested flow in reports/manual/.
 import logging
 import re
 import time
+from datetime import datetime
 
 from appium.webdriver.common.appiumby import AppiumBy
 from selenium.common.exceptions import (
@@ -68,6 +69,9 @@ class TournamentsPage:
     CALENDAR_OK = by_label("OK")
     CALENDAR_CANCEL = by_label("CANCEL")
     NEXT_MONTH = by_label("Next month")
+    PREVIOUS_MONTH = by_label("Previous month")
+    # Month shown by the open date picker, labelled e.g. "Select year\nNovember 2026".
+    SHOWN_MONTH = by_xpath("//*[starts-with(@content-desc, 'Select year')]")
     TIME_TEXT_MODE = by_label("Switch to text input mode")
     TIME_HOUR = by_xpath('//android.widget.EditText[@hint="Hour"]')
     TIME_MINUTE = by_xpath('//android.widget.EditText[@hint="Minute"]')
@@ -445,9 +449,48 @@ class TournamentsPage:
 
     # -- date / time pickers -----------------------------------------------
 
-    def _show_calendar_day(self, day, max_months=14):
-        """Advance the open date picker to the month containing day."""
+    def _shown_month(self, timeout=10):
+        """(year, month) the open date picker shows, from its "Select year\\nNovember 2026" label."""
+        text = self.wait_for(self.SHOWN_MONTH, timeout=timeout).get_attribute("content-desc")
+        shown = datetime.strptime(text.split("\n")[-1].strip(), "%B %Y")
+        return shown.year, shown.month
+
+    def _show_calendar_day(self, day, max_months=24):
+        """Move the open date picker to the month containing day; returns the day's cell.
+
+        Reads the month on show and steps backwards or forwards towards day's
+        month, waiting for each month's cells before looking. Looking straight
+        after the dialog opened sometimes missed the cell while the grid was
+        still drawing, and the old forward-only search then ran on to January
+        2028 (run of 12 Nov 2026). Returns None when the picker cannot reach
+        the month (its arrow is disabled).
+        """
         label = by_uia(f'new UiSelector().descriptionStartsWith("{calendar_label(day)}")')
+        target = (day.year, day.month)
+        try:
+            self._shown_month(timeout=5)
+        except TimeoutException:
+            # No month label in this picker's hierarchy (only verified in the
+            # fixture form): fall back to stepping forwards.
+            return self._show_calendar_day_forwards(label, max_months)
+        for _ in range(max_months + 1):
+            shown = self._shown_month()
+            if shown == target:
+                try:
+                    return WebDriverWait(self.driver, 5).until(lambda driver: driver.find_elements(*label))[0]
+                except TimeoutException:
+                    return None  # the month is shown but the day is not offered
+            arrow = self.wait_for(self.NEXT_MONTH if shown < target else self.PREVIOUS_MONTH)
+            if arrow.get_attribute("enabled") != "true":
+                return None
+            arrow.click()
+            WebDriverWait(self.driver, 5).until(
+                lambda _: self._shown_month() != shown,
+                message=f"The date picker stayed on {shown[1]}/{shown[0]} after changing month",
+            )
+        return None
+
+    def _show_calendar_day_forwards(self, label, max_months):
         for _ in range(max_months):
             found = self.driver.find_elements(*label)
             if found:

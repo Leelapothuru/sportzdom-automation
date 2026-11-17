@@ -18,6 +18,7 @@ reports/automation/latest_junit.xml always holds the latest run (for pipelines).
 """
 
 import logging
+import os
 import re
 import shutil
 from collections import defaultdict
@@ -70,6 +71,22 @@ class _TerminalCopy:
         return getattr(self._console, name)
 
 
+def pytest_addoption(parser):
+    """Run settings; each falls back to an environment / pipeline variable, then test data."""
+    group = parser.getgroup("sportzdom")
+    group.addoption("--tournament", default=None,
+                    help="Tournament for the fixtures flow (env SPORTZDOM_FIXTURES_TOURNAMENT)")
+    group.addoption("--organizer", default=None, type=int,
+                    help="Organizer's test account number, e.g. 1 for user1 (env SPORTZDOM_FIXTURES_ORGANIZER)")
+    group.addoption("--skip-defect-tests", action="store_true", default=False,
+                    help="Skip tests marked known_defect (env SPORTZDOM_SKIP_DEFECT_TESTS=true)")
+
+
+def _skip_defect_tests(config):
+    flag = os.getenv("SPORTZDOM_SKIP_DEFECT_TESTS", "").strip().lower() in ("1", "true", "yes")
+    return config.getoption("--skip-defect-tests") or flag
+
+
 @pytest.hookimpl(trylast=True)
 def pytest_configure(config):
     # trylast: the terminal reporter must exist before its output is copied.
@@ -118,6 +135,11 @@ def pytest_collection_modifyitems(config, items):
     })
     if features:
         _name_run_files(config, "__".join(features))
+    if _skip_defect_tests(config):
+        skip = pytest.mark.skip(reason="Known-defect tests skipped (--skip-defect-tests / SPORTZDOM_SKIP_DEFECT_TESTS)")
+        for item in items:
+            if "known_defect" in item.keywords:
+                item.add_marker(skip)
 
 
 def pytest_unconfigure(config):

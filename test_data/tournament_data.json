@@ -41,5 +41,15 @@
     "tournament": "Hyderabad Badminton League",
     "first_account": 1,
     "last_account": 40
+  },
+  "fixtures": {
+    "tournament": "Hyderabad Badminton League",
+    "organizer_account": 1,
+    "league_group_start_times": ["09:00", "16:00", "12:00", "19:00"],
+    "minutes_between_matches": 60,
+    "knockout_gap_days": 2,
+    "knockout_start_time": "10:00",
+    "third_place_time": "09:00",
+    "final_time": "11:00"
   }
 }

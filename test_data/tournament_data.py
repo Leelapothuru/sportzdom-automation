@@ -106,6 +106,35 @@ def registration_data():
     return RegistrationData(**_DATA["registration"])
 
 
+@dataclass(frozen=True)
+class FixturesData:
+    """Tournament, organizer and schedule for the fixtures flow.
+
+    Values are taken, first match wins, from: pytest options (--tournament,
+    --organizer), environment / pipeline variables (SPORTZDOM_FIXTURES_TOURNAMENT,
+    SPORTZDOM_FIXTURES_ORGANIZER), then tournament_data.json "fixtures".
+    """
+
+    tournament: str
+    organizer_account: int
+    league_group_start_times: tuple
+    minutes_between_matches: int
+    knockout_gap_days: int
+    knockout_start_time: str
+    third_place_time: str
+    final_time: str
+
+
+def fixtures_data(tournament=None, organizer=None):
+    values = dict(_DATA["fixtures"])
+    values["league_group_start_times"] = tuple(values["league_group_start_times"])
+    values["tournament"] = tournament or os.getenv("SPORTZDOM_FIXTURES_TOURNAMENT") or values["tournament"]
+    values["organizer_account"] = int(
+        organizer or os.getenv("SPORTZDOM_FIXTURES_ORGANIZER") or values["organizer_account"]
+    )
+    return FixturesData(**values)
+
+
 def account_credentials(number):
     """(email, password) of numbered test account number, e.g. user 2.
 

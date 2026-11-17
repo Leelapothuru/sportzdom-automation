@@ -21,8 +21,10 @@ class LogoutPage:
     # so it is found by position: the clickable element left of the Home search box.
     CLICKABLE = (AppiumBy.XPATH, "//*[@clickable='true']")
     DRAWER_GENERAL = (AppiumBy.ACCESSIBILITY_ID, "GENERAL")
-    # Drawer header: an image labelled with the profile name, holding the "ID ..." line.
-    PROFILE_NAME = (AppiumBy.XPATH, "//*[starts-with(@content-desc, 'ID ')]/parent::android.widget.ImageView")
+    # Drawer header: the element labelled with the profile name, holding the "ID ..." line.
+    # With a photo it is an ImageView labelled "<name>"; with the letter placeholder
+    # it is a View labelled "<letter>\n<name>" (seen 10 Nov 2026), so any type is accepted.
+    PROFILE_NAME = (AppiumBy.XPATH, "//*[starts-with(@content-desc, 'ID ')]/parent::*")
     DRAWER_ACCOUNT = (AppiumBy.ACCESSIBILITY_ID, "ACCOUNT")
     MY_PROFILE = (AppiumBy.ACCESSIBILITY_ID, "My Profile")
     # Sits directly above Log out; never tapped by these tests.
@@ -232,7 +234,9 @@ class LogoutPage:
         """Profile name of the signed-in account, read from the drawer header (e.g. 'user13')."""
         self.go_to_home()
         self.open_profile_drawer()
-        name = self.wait.until(EC.presence_of_element_located(self.PROFILE_NAME)).get_attribute("content-desc")
+        label = self.wait.until(EC.presence_of_element_located(self.PROFILE_NAME)).get_attribute("content-desc")
+        # The name is the last line; a letter placeholder adds its letter above it.
+        name = label.splitlines()[-1].strip()
         self.close_drawer()
         return name
 
