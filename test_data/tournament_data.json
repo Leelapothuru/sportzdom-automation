@@ -1,0 +1,55 @@
+{
+  "tournament_defaults": {
+    "sport": "FootBall",
+    "match_type": "Team",
+    "age_group": "U-19",
+    "category": "Mixed",
+    "level": "District",
+    "state": "Andhra Pradesh",
+    "district": "Anantapur",
+    "city": "Anantapur",
+    "first_prize": "5000",
+    "second_prize": "1000",
+    "start_in_days": 7,
+    "duration_days": 10,
+    "playing_days": "Every day",
+    "match_minutes": "90",
+    "players_per_side": "11",
+    "expected_teams": "16",
+    "ground_opens": ["8", "AM"],
+    "ground_closes": ["6", "PM"],
+    "grounds": 2,
+    "referees": 2,
+    "scorers": 1,
+    "entry_fee": "500",
+    "rules": ["FB01", "FB02"]
+  },
+  "badminton_singles": {
+    "name": "Hyderabad Badminton tournament",
+    "sport": "Badminton",
+    "tournament_type": "Knockout",
+    "match_type": "Singles",
+    "state": "Telangana",
+    "district": "Hyderabad",
+    "city": "Hyderabad",
+    "sets": "3",
+    "match_minutes": null,
+    "players_per_side": null,
+    "rules": ["BD001", "BD002"]
+  },
+  "registration": {
+    "tournament": "Hyderabad Badminton League",
+    "first_account": 1,
+    "last_account": 40
+  },
+  "fixtures": {
+    "tournament": "Hyderabad Badminton League",
+    "organizer_account": 1,
+    "league_group_start_times": ["09:00", "16:00", "12:00", "19:00"],
+    "minutes_between_matches": 60,
+    "knockout_gap_days": 2,
+    "knockout_start_time": "10:00",
+    "third_place_time": "09:00",
+    "final_time": "11:00"
+  }
+}
